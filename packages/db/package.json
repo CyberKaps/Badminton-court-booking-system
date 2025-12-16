@@ -1,0 +1,24 @@
+{
+  "name": "db",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "exports": {
+    "./client": "./index.ts"
+  },
+  "scripts": {
+    "db:migrate": "bunx prisma migrate dev",
+    "db:generate": "bunx prisma generate"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.1.0",
+    "@prisma/client": "^7.1.0",
+    "prisma": "^7.1.0"
+  }
+}

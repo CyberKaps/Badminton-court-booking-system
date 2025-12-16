@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+enum Role {
+  USER
+  ADMIN
+  COACH
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  name      String
+  role      Role       @default(USER)
+  phone     String?
+
+  bookings  Booking[]
+  waitlists Waitlist[]
+
+  createdAt DateTime   @default(now())
+}
+
+
+enum CourtType {
+  INDOOR
+  OUTDOOR
+}
+
+model Court {
+  id        String     @id @default(uuid())
+  name      String
+  type      CourtType
+  basePrice Decimal
+  isActive  Boolean    @default(true)
+
+  bookings  Booking[]
+  waitlists Waitlist[]
+}
+
+model Coach {
+  id         String     @id @default(uuid())
+  name       String
+  bio        String?
+  hourlyRate Decimal
+  isActive   Boolean    @default(true)
+
+  bookings   Booking[]
+}
+
+model Equipment {
+  id         String             @id @default(uuid())
+  name       String
+  totalStock Int
+  price      Decimal
+
+  items      BookingEquipment[]
+}
+
+
+enum AdjustmentType {
+  PERCENTAGE
+  FLAT
+}
+
+model PricingRule {
+  id             String          @id @default(uuid())
+  name           String
+
+  // Conditions (null = any)
+  daysOfWeek     Int[]
+  startTime      String?
+  endTime        String?
+  courtType      CourtType?
+
+  // Action
+  adjustmentType AdjustmentType
+  amount         Decimal
+
+  priority       Int             @default(0)
+  isActive       Boolean         @default(true)
+}
+
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Booking {
+  id         String        @id @default(uuid())
+
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+
+  courtId    String
+  court      Court         @relation(fields: [courtId], references: [id])
+
+  coachId    String?
+  coach      Coach?        @relation(fields: [coachId], references: [id])
+
+  startTime  DateTime
+  endTime    DateTime
+
+  // Financial snapshot
+  totalPrice Decimal
+  breakdown  Json          // { base, surge, equipment, coach, etc }
+
+  status     BookingStatus @default(PENDING)
+
+  equipments BookingEquipment[]
+
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([courtId, startTime, endTime])
+  @@index([userId])
+  @@index([status])
+}
+
+
+model BookingEquipment {
+  bookingId   String
+  booking     Booking   @relation(fields: [bookingId], references: [id])
+
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+
+  quantity    Int
+  unitPrice  Decimal    // Price snapshot at booking time
+
+  @@id([bookingId, equipmentId])
+}
+
+
+model Waitlist {
+  id         String    @id @default(uuid())
+
+  courtId    String
+  court      Court     @relation(fields: [courtId], references: [id])
+
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+
+  startTime  DateTime
+  endTime    DateTime
+
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([courtId, userId, startTime, endTime])
+  @@index([courtId, startTime, endTime])
+}
